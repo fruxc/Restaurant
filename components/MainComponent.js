@@ -5,6 +5,8 @@ import Home from "./HomeComponent";
 import About from "./AboutComponent";
 import Contact from "./ContactComponent";
 import Reservation from "./ReservationComponent";
+import Favorites from "./FavoriteComponent";
+import Login from "./LoginComponent";
 import {
   View,
   Platform,
@@ -12,7 +14,9 @@ import {
   StyleSheet,
   ScrollView,
   Text,
+  ToastAndroid,
 } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 import {
   createStackNavigator,
   createDrawerNavigator,
@@ -95,6 +99,57 @@ const CustomDrawerContentComponent = (props) => (
       <DrawerItems {...props} />
     </SafeAreaView>
   </ScrollView>
+);
+
+const FavoritesNavigator = createStackNavigator(
+  {
+    Favorites: { screen: Favorites },
+  },
+  {
+    navigationOptions: ({ navigation }) => ({
+      headerStyle: {
+        backgroundColor: "#512DA8",
+      },
+      headerTitleStyle: {
+        color: "#fff",
+      },
+      headerTintColor: "#fff",
+      headerLeft: (
+        <Icon
+          name="menu"
+          size={24}
+          iconStyle={{ color: "white" }}
+          onPress={() => navigation.navigate("DrawerToggle")}
+        />
+      ),
+    }),
+  }
+);
+
+const LoginNavigator = createStackNavigator(
+  {
+    Login: Login,
+  },
+  {
+    navigationOptions: ({ navigation }) => ({
+      headerStyle: {
+        backgroundColor: "#512DA8",
+      },
+      headerTitleStyle: {
+        color: "#fff",
+      },
+      title: "Login",
+      headerTintColor: "#fff",
+      headerLeft: (
+        <Icon
+          name="menu"
+          size={24}
+          iconStyle={{ color: "white" }}
+          onPress={() => navigation.toggleDrawer()}
+        />
+      ),
+    }),
+  }
 );
 
 const HomeNavigator = createStackNavigator(
@@ -198,6 +253,21 @@ const ContactNavigator = createStackNavigator(
 
 const MainNavigator = createDrawerNavigator(
   {
+    Login: {
+      screen: LoginNavigator,
+      navigationOptions: {
+        title: "Login",
+        drawerLabel: "Login",
+        drawerIcon: ({ tintColor, focused }) => (
+          <Icon
+            name="sign-in"
+            type="font-awesome"
+            size={24}
+            iconStyle={{ color: tintColor }}
+          />
+        ),
+      },
+    },
     Home: {
       screen: HomeNavigator,
       navigationOptions: {
@@ -233,6 +303,21 @@ const MainNavigator = createDrawerNavigator(
         ),
       },
     },
+    Favorites: {
+      screen: FavoritesNavigator,
+      navigationOptions: {
+        title: "My Favorites",
+        drawerLabel: "My Favorites",
+        drawerIcon: ({ tintColor }) => (
+          <Icon
+            name="heart"
+            type="font-awesome"
+            size={24}
+            iconStyle={{ color: tintColor }}
+          />
+        ),
+      },
+    },
     Contact: {
       screen: ContactNavigator,
       navigationOptions: {
@@ -265,6 +350,7 @@ const MainNavigator = createDrawerNavigator(
     },
   },
   {
+    initialRouteName: "Home",
     drawerBackgroundColor: "#D1C4E9",
     contentComponent: CustomDrawerContentComponent,
   }
@@ -276,7 +362,18 @@ class Main extends Component {
     this.props.fetchComments();
     this.props.fetchPromos();
     this.props.fetchLeaders();
+
+    NetInfo.fetch().then((connectionInfo) => {
+      ToastAndroid.show(
+        "Initial Network Connectivity Type: " +
+          connectionInfo.type +
+          ", isConnected: " +
+          connectionInfo.isConnected,
+        ToastAndroid.LONG
+      );
+    });
   }
+
   render() {
     return (
       <View

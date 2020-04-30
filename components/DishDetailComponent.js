@@ -7,11 +7,15 @@ import {
   FlatList,
   Modal,
   Button,
+  PanResponder,
+  Alert,
+  Share,
 } from "react-native";
 import { Card, Icon, Rating, Input } from "react-native-elements";
 import { connect } from "react-redux";
 import { baseUrl } from "../shared/baseUrl";
 import { postComment, postFavorite } from "../redux/ActionCreators";
+import * as Animatable from "react-native-animatable";
 
 const mapStateToProps = (state) => {
   return {
@@ -28,31 +32,117 @@ const mapDispatchToProps = (dispatch) => ({
 });
 
 function RenderDish({ dish, favorite, markFavorite, commentForm }) {
+  const shareDish = (title, message, url) => {
+    Share.share(
+      {
+        title: title,
+        message: title + ": " + message + " " + url,
+        url: url,
+      },
+      {
+        dialogTitle: "Share " + title,
+      }
+    );
+  };
+  handleViewRef = (ref) => (this.view = ref);
+
+  const recognizeComment = ({ moveX, moveY, dx, dy }) => {
+    if (dx > 200) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  const recognizeDrag = ({ moveX, moveY, dx, dy }) => {
+    if (dx < -200) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (e, gestureState) => {
+      return true;
+    },
+    onPanResponderGrant: () => {
+      this.view
+        .rubberBand(1000)
+        .then((endState) =>
+          console.log(endState.finished ? "finished" : "cancelled")
+        );
+    },
+    onPanResponderEnd: (e, gestureState) => {
+      console.log("pan responder end", gestureState);
+      if (recognizeDrag(gestureState)) {
+        Alert.alert(
+          "Add Favorite",
+          "Are you sure you wish to add " + dish.name + " to favorite?",
+          [
+            {
+              text: "Cancel",
+              onPress: () => console.log("Cancel Pressed"),
+              style: "cancel",
+            },
+            {
+              text: "OK",
+              onPress: () => {
+                favorite ? console.log("Already favorite") : markFavorite();
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      } else if (recognizeComment(gestureState)) {
+        commentForm();
+      }
+      return true;
+    },
+  });
+
   if (dish != null) {
     return (
-      <Card featuredTitle={dish.name} image={{ uri: baseUrl + dish.image }}>
-        <Text style={{ margin: 10 }}>{dish.description}</Text>
-        <View style={{ flexDirection: "row", justifyContent: "center" }}>
-          <Icon
-            raised
-            reverse
-            name={favorite ? "heart" : "heart-o"}
-            type="font-awesome"
-            color="#f50"
-            onPress={() =>
-              favorite ? console.log("Already favorite") : markFavorite()
-            }
-          />
-          <Icon
-            raised
-            reverse
-            name="pencil"
-            type="font-awesome"
-            color="#512DA8"
-            onPress={() => commentForm()}
-          />
-        </View>
-      </Card>
+      <Animatable.View
+        animation="fadeInDown"
+        duration={2000}
+        delay={1000}
+        ref={this.handleViewRef}
+        {...panResponder.panHandlers}
+      >
+        <Card featuredTitle={dish.name} image={{ uri: baseUrl + dish.image }}>
+          <Text style={{ margin: 10 }}>{dish.description}</Text>
+          <View style={{ flexDirection: "row", justifyContent: "center" }}>
+            <Icon
+              raised
+              reverse
+              name={favorite ? "heart" : "heart-o"}
+              type="font-awesome"
+              color="#f50"
+              onPress={() =>
+                favorite ? console.log("Already favorite") : markFavorite()
+              }
+            />
+            <Icon
+              raised
+              reverse
+              name="pencil"
+              type="font-awesome"
+              color="#512DA8"
+              onPress={() => commentForm()}
+            />
+            <Icon
+              raised
+              reverse
+              name="share"
+              type="font-awesome"
+              color="#51D2A8"
+              style={styles.cardItem}
+              onPress={() =>
+                shareDish(dish.name, dish.description, baseUrl + dish.image)
+              }
+            />
+          </View>
+        </Card>
+      </Animatable.View>
     );
   } else {
     return <View></View>;
@@ -62,9 +152,21 @@ function RenderDish({ dish, favorite, markFavorite, commentForm }) {
 function RenderComments({ comments }) {
   const renderCommentItem = ({ item, index }) => {
     return (
-      <View key={index} style={{ margin: 10 }}>
+      <View
+        key={index}
+        style={{
+          margin: 10,
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
         <Text style={{ fontSize: 14 }}>{item.comment}</Text>
-        <Text style={{ fontSize: 12 }}>{item.rating} Stars</Text>
+        <Rating
+          type="star"
+          fractions={0}
+          startingValue={item.rating}
+          imageSize={15}
+        />
         <Text style={{ fontSize: 12 }}>
           {"--" + item.author + ", " + item.date}
         </Text>
@@ -74,13 +176,15 @@ function RenderComments({ comments }) {
 
   if (comments != null) {
     return (
-      <Card title="Comments">
-        <FlatList
-          data={comments}
-          renderItem={renderCommentItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
-      </Card>
+      <Animatable.View animation="fadeInUp" duration={2000} delay={1000}>
+        <Card title="Comments">
+          <FlatList
+            data={comments}
+            renderItem={renderCommentItem}
+            keyExtractor={(item) => item.id.toString()}
+          />
+        </Card>
+      </Animatable.View>
     );
   } else {
     return <View></View>;
@@ -167,7 +271,7 @@ class DishDetail extends Component {
             <Text style={styles.modalTitle}>Add Your Comment</Text>
             <Rating
               minValue={1}
-              startingValue={1}
+              startingValue={3.3}
               fractions={0}
               showRating={true}
               onFinishRating={(rating) => this.setRating(rating)}
