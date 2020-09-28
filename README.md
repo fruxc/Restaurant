@@ -25,4 +25,4 @@ npm run ngrok
 npm start
 ```
 
-## Running React Native Application Hastle Free on EXPO CLI
+## Great! Hassle Free Way of Running a React Native Application Using EXPO CLI
